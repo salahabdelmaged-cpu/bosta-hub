@@ -9,24 +9,17 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     :root {
-      --bg: #0a0e17;
-      --card: #111827;
-      --card-border: #1f2937;
-      --primary: #ff5722;
-      --green: #10b981;
-      --red: #ef4444;
-      --cancel-rto: #b91c1c;
-      --orange: #f59e0b;
-      --text: #f9fafb;
-      --text-muted: #9ca3af;
+      --bg: #0a0e17; --card: #111827; --card-border: #1f2937;
+      --primary: #ff5722; --green: #10b981; --red: #ef4444;
+      --cancel-rto: #b91c1c; --orange: #f59e0b; --text: #f9fafb; --text-muted: #9ca3af;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; }
-
     header { 
       display: flex; justify-content: space-between; align-items: center; 
       background: linear-gradient(135deg, #1f2937 0%, #111827 100%); 
@@ -35,19 +28,16 @@
     }
     header h1 { font-size: 22px; color: #fff; display: flex; align-items: center; gap: 12px; }
     header h1 i { color: var(--primary); }
-
     .user-badge {
       display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05);
       padding: 6px 14px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
     }
     .user-badge input { background: transparent; border: none; color: var(--primary); font-weight: 900; font-size: 15px; outline: none; width: 100px; text-align: center; }
-
     .top-bar { 
       background: var(--card); padding: 15px 20px; border-radius: 14px; margin-bottom: 20px; 
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; 
       border: 1px solid var(--card-border);
     }
-
     .btn { 
       padding: 10px 18px; border-radius: 10px; border: none; font-weight: 800; font-size: 13px; 
       cursor: pointer; transition: all 0.2s ease-in-out; display: inline-flex; align-items: center; gap: 8px;
@@ -57,7 +47,6 @@
     .btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
     .btn-cancel-rto { background: linear-gradient(135deg, #b91c1c, #991b1b); color: #fff; border: 1px solid #f87171; }
     .btn-print { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-
     .scanner-box { 
       background: linear-gradient(180deg, rgba(17,24,39,0.8) 0%, rgba(15,23,42,0.9) 100%); 
       padding: 25px; border-radius: 20px; text-align: center; margin-bottom: 25px; 
@@ -67,41 +56,21 @@
       width: 90%; max-width: 550px; padding: 16px 20px; font-size: 26px; border-radius: 12px; 
       border: 2px solid #334155; text-align: center; font-weight: 900; background: #030712; color: #00ffcc; outline: none; 
     }
-
     .alert-banner { display: none; margin-top: 20px; padding: 20px; border-radius: 14px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .alert-CANCEL { background: linear-gradient(135deg, #ef4444, #991b1b); }
     .alert-CANCEL_RTO { background: linear-gradient(135deg, #b91c1c, #450a0a); border: 2px solid #f87171; }
     .alert-OTHER { background: linear-gradient(135deg, #374151, #1f2937); }
     .alert-DUPLICATE { background: linear-gradient(135deg, #f59e0b, #b45309); }
-
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .stat-card { background: var(--card); padding: 18px 15px; border-radius: 14px; text-align: center; border: 1px solid var(--card-border); }
     .stat-card p { color: var(--text-muted); font-size: 12px; font-weight: 800; }
     .stat-card h3 { font-size: 28px; color: #fff; margin-top: 5px; font-weight: 900; }
-
     .action-panel { display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; }
     .action-panel button { flex: 1; padding: 14px; border-radius: 12px; min-width: 180px; justify-content: center; }
-
     .table-container { background: var(--card); border-radius: 16px; border: 1px solid var(--card-border); overflow: hidden; }
     .logs-table { width: 100%; border-collapse: collapse; }
     .logs-table th, .logs-table td { padding: 14px; text-align: center; border-bottom: 1px solid var(--card-border); font-size: 13px; }
     .logs-table th { background: #1f2937; color: var(--primary); font-weight: 900; }
-
-    #printableLabel { display: none; }
-    @media print {
-      @page { size: 100mm 100mm; margin: 0; }
-      body * { visibility: hidden; }
-      #printableLabel, #printableLabel * { visibility: visible; }
-      #printableLabel { display: block !important; position: absolute; left: 0; top: 0; width: 100mm; height: 100mm; padding: 3mm; color: #000; background: #fff; font-family: 'Cairo', sans-serif; }
-      .bosta-ticket { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
-      .b-row { display: flex; border-bottom: 1px solid #000; width: 100%; }
-      .b-col { padding: 4px; border-left: 1px solid #000; }
-      .b-col:last-child { border-left: none; }
-      .logo-header { font-size: 22px; font-weight: 900; }
-      .b-zone { font-size: 20px; font-weight: 900; text-align: center; background: #eee; padding: 4px; }
-      .barcode-box { text-align: center; padding: 4px 0; }
-      .barcode-box svg { max-width: 95%; height: 45px; }
-    }
   </style>
 </head>
 <body>
@@ -122,7 +91,7 @@
     </div>
     <div style="display:flex; align-items:center; gap:10px;">
       <button class="btn btn-red" onclick="resetDayData()"><i class="fa-solid fa-trash"></i> تصفير شغل اليوم</button>
-      <span id="syncStatus" style="font-size:13px; color:var(--green); font-weight:900;">● جاهز للشغل ✅</span>
+      <span id="syncStatus" style="font-size:13px; color:var(--orange); font-weight:900;">● جاري التوصيل...</span>
     </div>
   </div>
 
@@ -149,7 +118,7 @@
     <button class="btn" onclick="exportMissingReport()" style="background:#374151; color:#fff;"><i class="fa-solid fa-download"></i> تصدير المفقودات</button>
   </div>
 
-  <h3 style="margin-bottom:12px; font-size:16px;"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> سجل حركة التسكين المباشرة</h3>
+  <h3 style="margin-bottom:12px; font-size:16px;"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> سجل حركة التسكين (مباشر لكل الأجهزة)</h3>
   <div class="table-container">
     <table class="logs-table">
       <thead>
@@ -159,61 +128,56 @@
           <th>الوقت</th>
           <th>التصنيف</th>
           <th>سبب الاستثناء / التوجيه</th>
-          <th>الطباعة</th>
         </tr>
       </thead>
       <tbody id="logsBody">
-        <tr><td colspan="6" style="color:var(--text-muted); padding:30px;">في انتظار البيانات...</td></tr>
+        <tr><td colspan="5" style="color:var(--text-muted); padding:30px;">في انتظار البيانات...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div id="printableLabel">
-    <div class="bosta-ticket">
-      <div class="b-row" style="align-items: center; justify-content: space-between;">
-        <div class="b-col" style="flex: 1;"><div class="logo-header">bosta</div></div>
-        <div class="b-col" style="flex: 2; text-align: left; font-size: 11px;">
-          <div><b>التاريخ:</b> <span id="lblDate">--</span></div>
-          <div><b>النوع:</b> <span id="lblType">تسليم</span></div>
-        </div>
-      </div>
-      <div class="barcode-box b-row" style="flex-direction: column; align-items: center;">
-        <svg id="labelBarcode"></svg>
-        <div id="lblTrk" style="font-size: 14px; font-weight: bold;"></div>
-      </div>
-      <div class="b-row"><div class="b-col b-zone" style="flex: 1;"><span id="lblZone">الزون</span></div></div>
-      <div class="b-row" style="flex-direction: column; font-size: 11px;">
-        <div class="b-col"><b>اسم التاجر:</b> <span id="lblBusiness">--</span></div>
-        <div class="b-col"><b>المندوب:</b> <span id="lblStar">--</span></div>
-        <div class="b-col"><b>العنوان:</b> <span id="lblAddress">--</span></div>
-      </div>
-      <div class="b-row" style="align-items: center;">
-        <div class="b-col" style="flex: 1.5; font-size: 10px;">
-          <div><b>التوجيه:</b> <span id="lblTag">CANCEL</span></div>
-        </div>
-        <div class="b-col" style="flex: 1; text-align:center; font-size:16px; font-weight:900;">
-          <span id="lblCod">0</span> EGP
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
-    let masterMap = JSON.parse(localStorage.getItem('bosta_master') || '{}');
-    let scannedMap = JSON.parse(localStorage.getItem('bosta_scanned') || '{}');
-    let lastScannedCode = null; let scanTimeout = null;
+    const firebaseConfig = {
+      databaseURL: "https://bosta-hub-default-rtdb.firebaseio.com"
+    };
 
-    const ALLOWED_CANCEL_REASONS = ["cancellation - the customer refuses to receive the shipment.", "cancellation - the customer refuses to receive the shipment", "cancellation - product issue", "cancellation - the customer wants to open the shipment.", "cancellation - the customer wants to open the shipment", "cancellation - shipment opened by force and refused by consignee"];
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    updateStats();
-    renderLogs();
+    let masterMap = {};
+    let scannedMap = {};
+    let scanTimeout = null;
 
-    function saveData() {
-      localStorage.setItem('bosta_master', JSON.stringify(masterMap));
-      localStorage.setItem('bosta_scanned', JSON.stringify(scannedMap));
+    const ALLOWED_CANCEL_REASONS = [
+      "cancellation - the customer refuses to receive the shipment.",
+      "cancellation - the customer refuses to receive the shipment",
+      "cancellation - product issue",
+      "cancellation - the customer wants to open the shipment.",
+      "cancellation - the customer wants to open the shipment",
+      "cancellation - shipment opened by force and refused by consignee"
+    ];
+
+    db.ref('.info/connected').on('value', (snap) => {
+      let st = document.getElementById('syncStatus');
+      if (snap.val() === true) {
+        st.style.color = 'var(--green)';
+        st.innerText = '● متصل ومزامن مباشرة ⚡';
+      } else {
+        st.style.color = 'var(--orange)';
+        st.innerText = '● جاري التوصيل...';
+      }
+    });
+
+    db.ref('master').on('value', (snapshot) => {
+      masterMap = snapshot.val() || {};
+      updateStats();
+    });
+
+    db.ref('scanned').on('value', (snapshot) => {
+      scannedMap = snapshot.val() || {};
       updateStats();
       renderLogs();
-    }
+    });
 
     function speakText(text) {
       if ('speechSynthesis' in window) {
@@ -239,29 +203,26 @@
         let data = new Uint8Array(e.target.result);
         let wb = XLSX.read(data, { type: 'array' });
         let jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-        masterMap = {};
+        let newMaster = {};
         jsonData.forEach(row => {
           let trk = getVal(row, ["Tracking Number", "tracking number", "Tracking"], Object.values(row)[0]);
           if (trk && trk !== "--") {
-            trk = String(trk).trim();
+            trk = String(trk).trim().replace(/[.#$/\[\]]/g, "_");
             let rawStatus = getVal(row, ["Delivery State", "Status"], "").toLowerCase();
             let rawType = getVal(row, ["Type"], "").toLowerCase();
             let rawReason = getVal(row, ["Latest Exception Reason", "Exception Reason"], "").toLowerCase();
             let isRTO = rawType.includes("rto") || rawStatus.includes("rto") || rawReason.includes("rto");
             let isCancel = ALLOWED_CANCEL_REASONS.some(r => rawReason.includes(r));
             let category = isRTO ? "CANCEL_RTO" : (isCancel ? "CANCEL" : "OTHER");
-            masterMap[trk] = {
+            newMaster[trk] = {
               category: category, details: isRTO ? "مرتجع RTO" : (isCancel ? "إكسبورت الكنسل" : "شحنة أخرى"),
               voiceText: isRTO ? "مرتجع" : (isCancel ? "كنسل عادي" : "أخرى"),
-              zone: getVal(row, ["DropOff City"], "القاهرة"), business: getVal(row, ["Business"], "--"),
-              starName: getVal(row, ["Star name"], "--"), address: getVal(row, ["DropOff First Line"], "--"),
-              cod: getVal(row, ["COD Amount"], "0"), rawDate: getVal(row, ["Scheduled At"], "--"), rawType: rawType || "SEND",
               rawReason: rawReason || "--", originalRow: row
             };
           }
         });
-        saveData();
-        speakText("تم رفع الشيت بنجاح");
+        db.ref('master').set(newMaster);
+        speakText("تم رفع الشيت بنجاح لجميع الأجهزة");
       };
       reader.readAsArrayBuffer(file);
     });
@@ -271,14 +232,14 @@
     barcodeInput.addEventListener('input', () => { clearTimeout(scanTimeout); scanTimeout = setTimeout(triggerScan, 150); });
 
     function triggerScan() {
-      let code = barcodeInput.value.trim();
+      let code = barcodeInput.value.trim().replace(/[.#$/\[\]]/g, "_");
       let user = document.getElementById('username').value.trim() || 'موظف';
       if (code.length >= 4) { processScan(code, user); barcodeInput.value = ''; }
     }
 
     function processScan(code, user) {
       let alertBanner = document.getElementById('alertBanner');
-      alertBanner.style.display = 'block'; lastScannedCode = code;
+      alertBanner.style.display = 'block';
       if (scannedMap[code]) {
         alertBanner.className = 'alert-banner alert-DUPLICATE';
         alertBanner.innerHTML = `⚠️ مكرر! تم مسحه سابقاً بواسطة (${scannedMap[code].user})`;
@@ -286,31 +247,16 @@
       } else {
         let info = masterMap[code];
         let category = info ? info.category : "UNKNOWN";
-        scannedMap[code] = {
+        let scanItem = {
           user: user, time: new Date().toLocaleTimeString('ar-EG'), category: category,
-          details: info ? info.details : "غير مدرج", zone: info ? info.zone : "--",
-          business: info ? info.business : "--", starName: info ? info.starName : "--",
-          address: info ? info.address : "--", cod: info ? info.cod : "0", rawType: info ? info.rawType : "--",
-          rawReason: info ? info.rawReason : "--", originalRow: info ? info.originalRow : {}
+          details: info ? info.details : "غير مدرج", rawReason: info ? info.rawReason : "--"
         };
-        saveData();
+        db.ref('scanned/' + code).set(scanItem);
         alertBanner.className = 'alert-banner alert-' + category;
-        alertBanner.innerHTML = `شحنة: ${code} (${user})<br>${scannedMap[code].details}`;
+        alertBanner.innerHTML = `شحنة: ${code} (${user})<br>${scanItem.details}`;
         speakText(info ? info.voiceText : "مفقود");
-        if (document.getElementById('autoPrint').checked) setTimeout(() => printLabel(code), 300);
       }
     }
-
-    function printLabel(code) {
-      let item = scannedMap[code]; if (!item) return;
-      document.getElementById('lblTrk').innerText = code; document.getElementById('lblZone').innerText = item.zone;
-      document.getElementById('lblBusiness').innerText = item.business; document.getElementById('lblStar').innerText = item.starName;
-      document.getElementById('lblAddress').innerText = item.address; document.getElementById('lblCod').innerText = item.cod;
-      JsBarcode("#labelBarcode", code, { format: "CODE128", width: 2, height: 45, displayValue: false });
-      window.print();
-    }
-
-    function printLastScan() { if (lastScannedCode) printLabel(lastScannedCode); }
 
     function updateStats() {
       let mKeys = Object.keys(masterMap), sKeys = Object.keys(scannedMap);
@@ -326,38 +272,19 @@
     function renderLogs() {
       let tbody = document.getElementById('logsBody'); tbody.innerHTML = '';
       let keys = Object.keys(scannedMap).reverse();
-      if (!keys.length) { tbody.innerHTML = '<tr><td colspan="6" style="padding:30px;">في انتظار الباركود...</td></tr>'; return; }
+      if (!keys.length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:30px;">في انتظار البيانات...</td></tr>'; return; }
       keys.forEach(code => {
         let item = scannedMap[code];
         tbody.innerHTML += `<tr>
           <td><b>${code}</b></td><td>${item.user}</td><td>${item.time}</td>
           <td>${item.category}</td><td>${item.rawReason}</td>
-          <td><button class="btn-print" onclick="printLabel('${code}')">طباعة</button></td>
         </tr>`;
       });
     }
 
-    function exportScannedOnly() {
-      let data = Object.keys(scannedMap).map(c => ({ "رقم الشحنة": c, "الموظف": scannedMap[c].user, "الوقت": scannedMap[c].time, "التصنيف": scannedMap[c].category }));
-      let ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "الممسوح"); XLSX.writeFile(wb, "الممسوح_بالمقر.xlsx");
-    }
-
-    function exportCategoryOnly(cat) {
-      let target = Object.keys(masterMap).filter(k => masterMap[k].category === cat).map(k => masterMap[k].originalRow);
-      let ws = XLSX.utils.json_to_sheet(target), wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, cat); XLSX.writeFile(wb, `${cat}.xlsx`);
-    }
-
-    function exportMissingReport() {
-      let missing = Object.keys(masterMap).filter(k => !scannedMap[k]).map(k => ({ "رقم الشحنة": k, "التصنيف": masterMap[k].category }));
-      let ws = XLSX.utils.json_to_sheet(missing), wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "المفقودات"); XLSX.writeFile(wb, "المفقودات.xlsx");
-    }
-
     function resetDayData() {
-      if (confirm("هل أنت متأكد من تصفير شغل اليوم؟")) {
-        scannedMap = {}; saveData();
+      if (confirm("هل أنت متأكد من تصفير شغل اليوم لجميع الأجهزة؟")) {
+        db.ref('scanned').remove();
       }
     }
   </script>
