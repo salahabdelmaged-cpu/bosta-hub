@@ -59,6 +59,7 @@
     .alert-banner { display: none; margin-top: 20px; padding: 20px; border-radius: 14px; font-size: 24px; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .alert-CANCEL { background: linear-gradient(135deg, #ef4444, #991b1b); }
     .alert-CANCEL_RTO { background: linear-gradient(135deg, #b91c1c, #450a0a); border: 2px solid #f87171; }
+    .alert-SEND { background: linear-gradient(135deg, #2563eb, #1e3a8a); border: 2px solid #60a5fa; }
     .alert-OTHER { background: linear-gradient(135deg, #374151, #1f2937); }
     .alert-DUPLICATE { background: linear-gradient(135deg, #f59e0b, #b45309); }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -108,7 +109,7 @@
     <div class="stat-card"><p>إجمالي الشيت</p><h3 id="statTotal">0</h3></div>
     <div class="stat-card"><p>الممسوح بالمقر</p><h3 id="statScanned" style="color:var(--green)">0</h3></div>
     <div class="stat-card"><p>إكسبورت الكنسل الـ 4</p><h3 id="statCancel" style="color:var(--red)">0</h3></div>
-    <div class="stat-card"><p>مرتجع (CANCEL RTO)</p><h3 id="statCancelRTO" style="color:#f87171">0</h3></div>
+    <div class="stat-card"><p>مرتجع (CANCEL RTO / RETURN)</p><h3 id="statCancelRTO" style="color:#f87171">0</h3></div>
   </div>
 
   <div class="action-panel">
@@ -211,13 +212,49 @@
             let rawStatus = getVal(row, ["Delivery State", "Status"], "").toLowerCase();
             let rawType = getVal(row, ["Type"], "").toLowerCase();
             let rawReason = getVal(row, ["Latest Exception Reason", "Exception Reason"], "").toLowerCase();
-            let isRTO = rawType.includes("rto") || rawStatus.includes("rto") || rawReason.includes("rto");
+            let requestedDate = getVal(row, ["Requested Delivery Date", "Delivery Date", "Next Attempt Date"], "");
+
+            // 1. فحص هل هي مرتجع (RTO أو CUSTOMER_RETURN_PICKUP)
+            let isRTO = rawType.includes("rto") || rawStatus.includes("rto") || rawReason.includes("rto") || rawType.includes("customer_return_pickup") || rawStatus.includes("customer_return_pickup");
+            
+            // 2. فحص هل هي كنسل عادي
             let isCancel = ALLOWED_CANCEL_REASONS.some(r => rawReason.includes(r));
-            let category = isRTO ? "CANCEL_RTO" : (isCancel ? "CANCEL" : "OTHER");
+
+            // 3. فحص هل هي حالة SEND (تأجيل / Backlog)
+            let isSend = rawStatus.includes("send") || rawType.includes("send") || rawReason.includes("postponed") || rawReason.includes("backlog") || requestedDate !== "";
+
+            let category = "OTHER";
+            let details = "شحنة أخرى";
+            let voiceText = "أخرى";
+
+            if (isRTO) {
+              category = "CANCEL_RTO";
+              details = "مرتجع RTO / Return Pickup";
+              voiceText = "مرتجع";
+            } else if (isCancel) {
+              category = "CANCEL";
+              details = "إكسبورت الكنسل العادي";
+              voiceText = "كنسل عادي";
+            } else if (isSend) {
+              category = "SEND";
+              if (rawReason.includes("backlog")) {
+                details = "SEND - باك لوج (Backlog)";
+                voiceText = "سند باك لوج";
+              } else if (requestedDate && requestedDate !== "--") {
+                details = `SEND - مؤجل ليوم: ${requestedDate}`;
+                voiceText = `سند مؤجل ليوم ${requestedDate}`;
+              } else {
+                details = "SEND - مؤجل / إعادة محاولة";
+                voiceText = "سند مؤجل";
+              }
+            }
+
             newMaster[trk] = {
-              category: category, details: isRTO ? "مرتجع RTO" : (isCancel ? "إكسبورت الكنسل" : "شحنة أخرى"),
-              voiceText: isRTO ? "مرتجع" : (isCancel ? "كنسل عادي" : "أخرى"),
-              rawReason: rawReason || "--", originalRow: row
+              category: category,
+              details: details,
+              voiceText: voiceText,
+              rawReason: rawReason || details,
+              originalRow: row
             };
           }
         });
