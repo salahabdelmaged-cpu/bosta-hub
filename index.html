@@ -197,6 +197,20 @@
       return def;
     }
 
+    function formatDate(val) {
+      if (!val || val === "--") return "";
+      let str = String(val).trim();
+      // لو التاريخ جاي رقم تسلسلي بتاع إكسل
+      if (!isNaN(str) && Number(str) > 30000) {
+        let dateObj = XLSX.SSF.parse_date_code(Number(str));
+        if (dateObj) return `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`;
+      }
+      // لو التاريخ مكتوب معاه وقت نحتفظ باليوم فقط
+      if (str.includes("T")) str = str.split("T")[0];
+      if (str.includes(" ")) str = str.split(" ")[0];
+      return str;
+    }
+
     document.getElementById('excelFile').addEventListener('change', function(e) {
       let file = e.target.files[0]; if (!file) return;
       let reader = new FileReader();
@@ -209,10 +223,20 @@
           let trk = getVal(row, ["Tracking Number", "tracking number", "Tracking"], Object.values(row)[0]);
           if (trk && trk !== "--") {
             trk = String(trk).trim().replace(/[.#$/\[\]]/g, "_");
-            let rawStatus = getVal(row, ["Delivery State", "Status"], "").toLowerCase();
+            let rawStatus = getVal(row, ["Delivery State", "Status", "State"], "").toLowerCase();
             let rawType = getVal(row, ["Type"], "").toLowerCase();
-            let rawReason = getVal(row, ["Latest Exception Reason", "Exception Reason"], "").toLowerCase();
-            let requestedDate = getVal(row, ["Requested Delivery Date", "Delivery Date", "Next Attempt Date"], "");
+            let rawReason = getVal(row, ["Latest Exception Reason", "Exception Reason", "Reason"], "").toLowerCase();
+            
+            // قراءة عمود Scheduled At بالتحديد مع باقي الأعمدة الاحتياطية
+            let rawDateVal = getVal(row, [
+              "Scheduled At", 
+              "scheduled at", 
+              "Requested Delivery Date", 
+              "Delivery Date", 
+              "Next Attempt Date"
+            ], "");
+
+            let requestedDate = formatDate(rawDateVal);
 
             // 1. فحص هل هي مرتجع (RTO أو CUSTOMER_RETURN_PICKUP)
             let isRTO = rawType.includes("rto") || rawStatus.includes("rto") || rawReason.includes("rto") || rawType.includes("customer_return_pickup") || rawStatus.includes("customer_return_pickup");
@@ -240,7 +264,7 @@
               if (rawReason.includes("backlog")) {
                 details = "SEND - باك لوج (Backlog)";
                 voiceText = "سند باك لوج";
-              } else if (requestedDate && requestedDate !== "--") {
+              } else if (requestedDate !== "") {
                 details = `SEND - مؤجل ليوم: ${requestedDate}`;
                 voiceText = `سند مؤجل ليوم ${requestedDate}`;
               } else {
