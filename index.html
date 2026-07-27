@@ -8,8 +8,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <!-- Firebase Scripts (الربط اللحظي السحابي) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     :root {
@@ -85,8 +88,8 @@
       text-align: center;
     }
 
-    /* Room Bar */
-    .room-bar { 
+    /* Top Action Bar */
+    .top-bar { 
       background: var(--card); 
       padding: 15px 20px; 
       border-radius: 14px; 
@@ -99,20 +102,6 @@
       border: 1px solid var(--card-border);
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
-
-    .room-bar input { 
-      background: #0f172a; 
-      color: #fff; 
-      border: 1px solid #334155; 
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-weight: bold; 
-      font-size: 14px; 
-      text-align: center; 
-      outline: none;
-      transition: 0.3s;
-    }
-    .room-bar input:focus { border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
 
     /* Buttons */
     .btn { 
@@ -252,7 +241,7 @@
     .logs-table th { background: #1f2937; color: var(--primary); font-weight: 900; }
     .logs-table tbody tr:hover { background: rgba(255,255,255,0.02); }
 
-    /* Label Print (Invisible on screen) */
+    /* Label Print */
     #printableLabel { display: none; }
     @media print {
       @page { size: 100mm 100mm; margin: 0; }
@@ -292,17 +281,15 @@
     </div>
   </header>
 
-  <div class="room-bar">
+  <div class="top-bar">
     <div>
-      <label for="excelFile" class="btn btn-green"><i class="fa-solid fa-file-excel"></i> Export</label>
+      <label for="excelFile" class="btn btn-green"><i class="fa-solid fa-file-excel"></i> رفع الشيت الرئيسي</label>
       <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="display:none;">
     </div>
     
     <div style="display:flex; align-items:center; gap:10px;">
-      <input type="text" id="roomId" value="BOSTA-HUB-1" style="width:130px;">
-      <button class="btn btn-main" onclick="connectToRoom()"><i class="fa-solid fa-wifi"></i> اتصل</button>
-      <button class="btn btn-red" onclick="closeRoom()"><i class="fa-solid fa-power-off"></i> إنهاء</button>
-      <span id="syncStatus" style="font-size:12px; color:var(--orange); font-weight:900;">● غير متصل</span>
+      <button class="btn btn-red" onclick="resetDayData()"><i class="fa-solid fa-trash"></i> إشهار/تصفير شغل اليوم</button>
+      <span id="syncStatus" style="font-size:13px; color:var(--orange); font-weight:900;">● جاري الاتصال بالسحابة...</span>
     </div>
   </div>
 
@@ -331,7 +318,7 @@
     <button class="btn" onclick="exportMissingReport()" style="background:#374151; color:#fff;"><i class="fa-solid fa-download"></i> تصدير المفقودات</button>
   </div>
 
-  <h3 style="margin-bottom:12px; display:flex; align-items:center; gap:8px; font-size:16px;"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> سجل حركة التسكين المباشرة</h3>
+  <h3 style="margin-bottom:12px; display:flex; align-items:center; gap:8px; font-size:16px;"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> سجل حركة التسكين المباشرة (سحابي)</h3>
   <div class="table-container">
     <table class="logs-table">
       <thead>
@@ -345,7 +332,7 @@
         </tr>
       </thead>
       <tbody id="logsBody">
-        <tr><td colspan="6" style="color:var(--text-muted); padding:30px;">في انتظار رفع الشيت وبدء العمليات...</td></tr>
+        <tr><td colspan="6" style="color:var(--text-muted); padding:30px;">في انتظار البيانات السحابية...</td></tr>
       </tbody>
     </table>
   </div>
@@ -390,11 +377,16 @@
   </div>
 
   <script>
+    // تهيئة السيرفر السحابي المجاني السريع
+    const firebaseConfig = {
+      databaseURL: "https://bosta-hub-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     let masterMap = {}; 
     let scannedMap = {}; 
     let lastScannedCode = null;
-    let peer = null;
-    let connections = [];
     let scanTimeout = null;
 
     const ALLOWED_CANCEL_REASONS = [
@@ -405,6 +397,30 @@
       "cancellation - the customer wants to open the shipment",
       "cancellation - shipment opened by force and refused by consignee"
     ];
+
+    // استماع لحظي لسيرفر السحابة أول ما الصفحة تفتح
+    db.ref('.info/connected').on('value', function(snap) {
+      if (snap.val() === true) {
+        document.getElementById('syncStatus').innerText = "● متصل سحابياً أونلاين ✅";
+        document.getElementById('syncStatus').style.color = "var(--green)";
+      } else {
+        document.getElementById('syncStatus').innerText = "● جاري الأتصال السحابي...";
+        document.getElementById('syncStatus').style.color = "var(--orange)";
+      }
+    });
+
+    // جلب ومزامنة الشيت الرئيسي تلقائياً عند أي تغيير
+    db.ref('masterMap').on('value', snapshot => {
+      masterMap = snapshot.val() || {};
+      updateStats();
+    });
+
+    // جلب ومزامنة عمليات المسح المباشرة فوراً
+    db.ref('scannedMap').on('value', snapshot => {
+      scannedMap = snapshot.val() || {};
+      updateStats();
+      renderLogs();
+    });
 
     function speakText(text) {
       if ('speechSynthesis' in window) {
@@ -438,7 +454,7 @@
         let worksheet = workbook.Sheets[workbook.SheetNames[0]];
         let jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-        masterMap = {};
+        let newMasterMap = {};
         jsonData.forEach(row => {
           let trk = getVal(row, ["Tracking Number", "tracking number", "Tracking"], Object.values(row)[0]);
           
@@ -484,7 +500,7 @@
               labelTag = "CANCEL / كنسل عادي";
             }
 
-            masterMap[trk] = { 
+            newMasterMap[trk] = { 
               category: category, details: details, voiceText: voiceText, labelTag: labelTag,
               zone: fullZone, business: getVal(row, ["Business"], "عميل بوسطة"), starName: getVal(row, ["Star name"], "--"), address: fullAddress, cod: getVal(row, ["COD Amount", "COD"], "0"), desc: getVal(row, ["Description", "Items"], "طرد بوسطة"),
               rawDate: getVal(row, ["Scheduled At", "Scheduled"], "--"), rawType: rawType || "SEND",
@@ -494,9 +510,9 @@
           }
         });
 
-        updateStats();
-        speakText("تم التحميل");
-        broadcastData({ type: 'SYNC_MASTER', masterMap: masterMap });
+        // رفع الشيت المحدث للسحابة ليظهر عند الجميع فوراً
+        db.ref('masterMap').set(newMasterMap);
+        speakText("تم رفع الشيت سحابياً");
       };
       reader.readAsArrayBuffer(file);
     });
@@ -508,10 +524,10 @@
     function triggerScan() {
       let code = barcodeInput.value.trim();
       let user = document.getElementById('username').value.trim() || 'موظف';
-      if (code.length >= 4) { processScan(code, user, true); barcodeInput.value = ''; }
+      if (code.length >= 4) { processScan(code, user); barcodeInput.value = ''; }
     }
 
-    function processScan(code, user, isLocal) {
+    function processScan(code, user) {
       let alertBanner = document.getElementById('alertBanner');
       alertBanner.style.display = 'block';
       lastScannedCode = code;
@@ -529,7 +545,7 @@
         let labelTag = itemInfo ? itemInfo.labelTag : "غير مدرج";
         let timeStr = new Date().toLocaleTimeString('ar-EG');
 
-        scannedMap[code] = { 
+        let scanData = { 
           user: user, time: timeStr, category: category, details: details, labelTag: labelTag,
           zone: itemInfo ? itemInfo.zone : "غير معروف",
           business: itemInfo ? itemInfo.business : "--",
@@ -543,6 +559,9 @@
           originalRow: itemInfo ? itemInfo.originalRow : {}
         };
 
+        // حفظ الشحنة سحابياً فوراً
+        db.ref('scannedMap/' + code).set(scanData);
+
         alertBanner.className = 'alert-banner alert-' + category;
         alertBanner.innerHTML = `رقم الشحنة: ${code} (${user})<br>${details}`;
 
@@ -551,12 +570,7 @@
         if (document.getElementById('autoPrint').checked) {
           setTimeout(() => { printLabel(code); }, 300);
         }
-
-        if (isLocal) { broadcastData({ type: 'NEW_SCAN', code: code, user: user }); }
       }
-
-      updateStats();
-      renderLogs();
     }
 
     function printLabel(code) {
@@ -683,46 +697,11 @@
       XLSX.writeFile(wb, "تقرير_المفقودات.xlsx");
     }
 
-    function connectToRoom() {
-      let roomId = document.getElementById('roomId').value.trim();
-      if (!roomId) return alert("يرجى إدخال رمز الغرفة أولاً!");
-
-      document.getElementById('syncStatus').innerText = "● جاري الاتصال...";
-      peer = new Peer(roomId + "-" + Math.floor(Math.random()*1000));
-
-      peer.on('open', function() {
-        document.getElementById('syncStatus').innerText = "● متصل بالغرفة ✅";
-        document.getElementById('syncStatus').style.color = "var(--green)";
-        speakText("تم الاتصال");
-      });
-
-      peer.on('connection', function(conn) {
-        connections.push(conn);
-        conn.on('data', handleIncomingData);
-      });
-    }
-
-    function closeRoom() {
-      if (confirm("هل أنت تأكد من إغلاق الغرفة وإنهاء العمل؟")) {
-        broadcastData({ type: 'ROOM_CLOSED' });
-        connections.forEach(conn => conn.close());
-        connections = [];
-        if (peer) peer.destroy();
-        masterMap = {}; scannedMap = {};
-        document.getElementById('syncStatus').innerText = "● غير متصل";
-        document.getElementById('syncStatus').style.color = "var(--red)";
-        document.getElementById('alertBanner').style.display = 'none';
-        updateStats(); renderLogs();
-        speakText("تم الإغلاق");
-        alert("تم إغلاق الغرفة وفصل جميع الموظفين بنجاح!");
+    function resetDayData() {
+      if (confirm("هل أنت تأكد من مسح جميع بيانات الشحنات الممسوحة لبدء يوم جديد؟")) {
+        db.ref('scannedMap').remove();
+        alert("تم تصفير شغل اليوم بنجاح على جميع الأجهزة!");
       }
-    }
-
-    function broadcastData(data) { connections.forEach(conn => { if (conn.open) conn.send(data); }); }
-    function handleIncomingData(data) {
-      if (data.type === 'NEW_SCAN') { processScan(data.code, data.user, false); }
-      else if (data.type === 'SYNC_MASTER') { masterMap = data.masterMap; updateStats(); }
-      else if (data.type === 'ROOM_CLOSED') { alert("⚠️ تم إغلاق الغرفة بواسطة المشرف."); location.reload(); }
     }
   </script>
 </body>
