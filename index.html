@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOSTA HUB - NC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --card: #111827;
+      --card-border: #1f2937;
+      --primary: #ff5722;
+      --primary-glow: rgba(255, 87, 34, 0.4);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.4);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.4);
+      --cancel-rto: #b91c1c;
+      --orange: #f59e0b;
+      --blue: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.4);
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+    
+    body { 
+      background-color: var(--bg); 
+      color: var(--text); 
+      padding: 20px;
+      background-image: radial-gradient(circle at 50% 0%, rgba(255, 87, 34, 0.08), transparent 70%);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%); 
+      padding: 18px 25px; 
+      border-radius: 16px; 
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 20px;
+      flex-wrap: wrap; 
+      gap: 15px; 
+    }
+
+    header h1 { 
+      font-size: 22px; 
+      color: #fff; 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      text-shadow: 0 0 10px var(--primary-glow);
+    }
+    header h1 i { color: var(--primary); }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.05);
+      padding: 6px 14px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .user-badge input {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 15px;
+      outline: none;
+      width: 100px;
+      text-align: center;
+    }
+
+    /* Room Bar */
+    .room-bar { 
+      background: var(--card); 
+      padding: 15px 20px; 
+      border-radius: 14px; 
+      margin-bottom: 20px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      flex-wrap: wrap; 
+      gap: 15px; 
+      border: 1px solid var(--card-border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .room-bar input { 
+      background: #0f172a; 
+      color: #fff; 
+      border: 1px solid #334155; 
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold; 
+      font-size: 14px; 
+      text-align: center; 
+      outline: none;
+      transition: 0.3s;
+    }
+    .room-bar input:focus { border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+
+    /* Buttons */
+    .btn { 
+      padding: 10px 18px; 
+      border-radius: 10px; 
+      border: none; 
+      font-weight: 800; 
+      font-size: 13px; 
+      cursor: pointer; 
+      transition: all 0.2s ease-in-out; 
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-main { background: linear-gradient(135deg, #ff5722, #f4511e); color: #fff; box-shadow: 0 4px 15px var(--primary-glow); }
+    .btn-green { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 15px var(--green-glow); }
+    .btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; box-shadow: 0 4px 15px var(--red-glow); }
+    .btn-cancel-rto { background: linear-gradient(135deg, #b91c1c, #991b1b); color: #fff; border: 1px solid #f87171; }
+    .btn-print { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+
+    /* Scanner Box */
+    .scanner-box { 
+      background: linear-gradient(180deg, rgba(17,24,39,0.8) 0%, rgba(15,23,42,0.9) 100%); 
+      padding: 25px; 
+      border-radius: 20px; 
+      text-align: center; 
+      margin-bottom: 25px; 
+      border: 2px dashed rgba(255, 87, 34, 0.4); 
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scan-input { 
+      width: 90%; 
+      max-width: 550px; 
+      padding: 16px 20px; 
+      font-size: 26px; 
+      border-radius: 12px; 
+      border: 2px solid #334155; 
+      text-align: center; 
+      font-weight: 900; 
+      background: #030712; 
+      color: #00ffcc; 
+      outline: none; 
+      letter-spacing: 2px;
+      transition: all 0.3s;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+    }
+    .scan-input:focus { 
+      border-color: var(--primary); 
+      box-shadow: 0 0 20px var(--primary-glow), inset 0 2px 10px rgba(0,0,0,0.8); 
+    }
+
+    .print-controls { 
+      margin-top: 18px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 20px; 
+      flex-wrap: wrap; 
+    }
+    .print-controls label { 
+      font-weight: 700; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      background: rgba(255,255,255,0.03);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Alert Banner Neon style */
+    .alert-banner { 
+      display: none; 
+      margin-top: 20px; 
+      padding: 20px; 
+      border-radius: 14px; 
+      font-size: 24px; 
+      font-weight: 900; 
+      line-height: 1.5; 
+      animation: popup 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .alert-CANCEL { background: linear-gradient(135deg, #ef4444, #991b1b); box-shadow: 0 0 30px var(--red-glow); }
+    .alert-CANCEL_RTO { background: linear-gradient(135deg, #b91c1c, #450a0a); border: 2px solid #f87171; box-shadow: 0 0 30px rgba(185, 28, 28, 0.6); }
+    .alert-OTHER { background: linear-gradient(135deg, #374151, #1f2937); }
+    .alert-DUPLICATE { background: linear-gradient(135deg, #f59e0b, #b45309); animation: shake 0.3s; }
+
+    /* Stats Grid */
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+      gap: 15px; 
+      margin-bottom: 25px; 
+    }
+    .stat-card { 
+      background: var(--card); 
+      padding: 18px 15px; 
+      border-radius: 14px; 
+      text-align: center; 
+      border: 1px solid var(--card-border);
+      position: relative;
+      overflow: hidden;
+      transition: 0.3s;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--primary);
+    }
+    .stat-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.2); }
+    .stat-card p { color: var(--text-muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .stat-card h3 { font-size: 28px; color: #fff; margin-top: 5px; font-weight: 900; }
+
+    /* Action Panel */
+    .action-panel { display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; }
+    .action-panel button { flex: 1; padding: 14px; border-radius: 12px; min-width: 180px; justify-content: center; }
+
+    /* Logs Table */
+    .table-container {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .logs-table { width: 100%; border-collapse: collapse; }
+    .logs-table th, .logs-table td { padding: 14px; text-align: center; border-bottom: 1px solid var(--card-border); font-size: 13px; }
+    .logs-table th { background: #1f2937; color: var(--primary); font-weight: 900; }
+    .logs-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* Label Print (Invisible on screen) */
+    #printableLabel { display: none; }
+    @media print {
+      @page { size: 100mm 100mm; margin: 0; }
+      body * { visibility: hidden; }
+      #printableLabel, #printableLabel * { visibility: visible; }
+      #printableLabel {
+        display: block !important;
+        position: absolute; left: 0; top: 0;
+        width: 100mm; height: 100mm; padding: 3mm;
+        color: #000; background: #fff;
+        font-family: 'Cairo', Arial, sans-serif; box-sizing: border-box;
+      }
+      .bosta-ticket { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+      .b-row { display: flex; border-bottom: 1px solid #000; width: 100%; }
+      .b-row:last-child { border-bottom: none; }
+      .b-col { padding: 4px; border-left: 1px solid #000; }
+      .b-col:last-child { border-left: none; }
+      .logo-header { font-size: 22px; font-weight: 900; letter-spacing: -1px; text-transform: lowercase; }
+      .b-zone { font-size: 20px; font-weight: 900; text-align: center; background: #eee; padding: 4px; }
+      .b-cod { font-size: 18px; font-weight: 900; text-align: center; }
+      .barcode-box { text-align: center; padding: 4px 0; }
+      .barcode-box svg { max-width: 95%; height: 45px; }
+    }
+
+    @keyframes popup { 0%{transform: scale(0.9); opacity:0;} 100%{transform: scale(1); opacity:1;} }
+    @keyframes shake { 0%{transform:translateX(0)} 25%{transform:translateX(-10px)} 50%{transform:translateX(10px)} 75%{transform:translateX(-10px)} 100%{transform:translateX(0)} }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1><i class="fa-solid fa-s"></i> BOSTA HUB - NC</h1>
+    <div class="user-badge">
+      <i class="fa-solid fa-user-gear" style="color:var(--primary)"></i>
+      <span>الموظف:</span>
+      <input type="text" id="username" value="الموظف 1">
+    </div>
+  </header>
+
+  <div class="room-bar">
+    <div>
+      <label for="excelFile" class="btn btn-green"><i class="fa-solid fa-file-excel"></i> Export</label>
+      <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="display:none;">
+    </div>
+    
+    <div style="display:flex; align-items:center; gap:10px;">
+      <input type="text" id="roomId" value="BOSTA-HUB-1" style="width:130px;">
+      <button class="btn btn-main" onclick="connectToRoom()"><i class="fa-solid fa-wifi"></i> اتصل</button>
+      <button class="btn btn-red" onclick="closeRoom()"><i class="fa-solid fa-power-off"></i> إنهاء</button>
+      <span id="syncStatus" style="font-size:12px; color:var(--orange); font-weight:900;">● غير متصل</span>
+    </div>
+  </div>
+
+  <div class="scanner-box">
+    <input type="text" id="barcode" class="scan-input" placeholder="READY TO SCAN..." autofocus autocomplete="off">
+    
+    <div class="print-controls">
+      <label><input type="checkbox" id="autoPrint" style="accent-color: var(--primary);"> 🖨️ طباعة ملصق تلقائي عند المسح</label>
+      <button class="btn btn-print" onclick="printLastScan()"><i class="fa-solid fa-print"></i> طباعة ملصق آخر شحنة</button>
+    </div>
+
+    <div id="alertBanner" class="alert-banner"></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card" style="--primary: #3b82f6;"><p>إجمالي الشيت</p><h3 id="statTotal">0</h3></div>
+    <div class="stat-card" style="--primary: #10b981;"><p>الممسوح بالمقر</p><h3 id="statScanned" style="color:var(--green)">0</h3></div>
+    <div class="stat-card" style="--primary: #ef4444;"><p>إكسبورت الكنسل الـ 4</p><h3 id="statCancel" style="color:var(--red)">0</h3></div>
+    <div class="stat-card" style="--primary: #b91c1c;"><p>مرتجع (Cancel RTO)</p><h3 id="statCancelRTO" style="color:#f87171">0</h3></div>
+  </div>
+
+  <div class="action-panel">
+    <button class="btn btn-green" onclick="exportScannedOnly()"><i class="fa-solid fa-file-excel"></i> تصدير الممسوح بالمقر (<span id="btnScannedCnt">0</span>)</button>
+    <button class="btn btn-red" onclick="exportCategoryOnly('CANCEL')"><i class="fa-solid fa-file-export"></i> تصدير إكسبورت الكنسل (<span id="btnCancelCnt">0</span>)</button>
+    <button class="btn btn-cancel-rto" onclick="exportCategoryOnly('CANCEL_RTO')"><i class="fa-solid fa-file-export"></i> تصدير Cancel RTO (<span id="btnCancelRtoCnt">0</span>)</button>
+    <button class="btn" onclick="exportMissingReport()" style="background:#374151; color:#fff;"><i class="fa-solid fa-download"></i> تصدير المفقودات</button>
+  </div>
+
+  <h3 style="margin-bottom:12px; display:flex; align-items:center; gap:8px; font-size:16px;"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> سجل حركة التسكين المباشرة</h3>
+  <div class="table-container">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th>رقم تتبع الشحنة</th>
+          <th>الموظف</th>
+          <th>الوقت</th>
+          <th>التصنيف</th>
+          <th>سبب الاستثناء / التوجيه</th>
+          <th>الطباعة</th>
+        </tr>
+      </thead>
+      <tbody id="logsBody">
+        <tr><td colspan="6" style="color:var(--text-muted); padding:30px;">في انتظار رفع الشيت وبدء العمليات...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- بليصة بوسطة الحرارية -->
+  <div id="printableLabel">
+    <div class="bosta-ticket">
+      <div class="b-row" style="align-items: center; justify-content: space-between;">
+        <div class="b-col" style="flex: 1;"><div class="logo-header">bosta</div></div>
+        <div class="b-col" style="flex: 2; text-align: left; font-size: 11px;">
+          <div><b>التاريخ:</b> <span id="lblDate">--/--/----</span></div>
+          <div><b>النوع:</b> <span id="lblType">تسليم</span></div>
+        </div>
+      </div>
+      <div class="barcode-box b-row" style="flex-direction: column; align-items: center;">
+        <svg id="labelBarcode"></svg>
+        <div id="lblTrk" style="font-size: 14px; font-weight: bold; letter-spacing: 1px;"></div>
+      </div>
+      <div class="b-row">
+        <div class="b-col b-zone" style="flex: 1;"><span id="lblZone">المنطقة / الزون</span></div>
+      </div>
+      <div class="b-row" style="flex-direction: column; font-size: 11px; gap: 2px;">
+        <div class="b-col"><b>اسم التاجر:</b> <span id="lblBusiness">--</span></div>
+        <div class="b-col"><b>المندوب:</b> <span id="lblStar">--</span></div>
+        <div class="b-col"><b>العنوان:</b> <span id="lblAddress">تفاصيل العنوان</span></div>
+      </div>
+      <div class="b-row" style="align-items: center;">
+        <div class="b-col" style="flex: 1.5; font-size: 10px;">
+          <div><b>الوصف:</b> <span id="lblDesc">طرد بوسطة</span></div>
+          <div><b>التوجيه الداخلي:</b> <span id="lblTag">CANCEL</span></div>
+        </div>
+        <div class="b-col b-cod" style="flex: 1; border-right: 1px solid #000;">
+          <div style="font-size: 9px; font-weight: normal;">المبلغ المطلوب</div>
+          <span id="lblCod">0</span> EGP
+        </div>
+      </div>
+      <div class="b-row" style="font-size: 9px; justify-content: space-between; padding: 2px 4px; background: #fafafa;">
+        <div><b>الموظف:</b> <span id="lblUser">--</span></div>
+        <div><b>الوقت:</b> <span id="lblTime">--</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let masterMap = {}; 
+    let scannedMap = {}; 
+    let lastScannedCode = null;
+    let peer = null;
+    let connections = [];
+    let scanTimeout = null;
+
+    const ALLOWED_CANCEL_REASONS = [
+      "cancellation - the customer refuses to receive the shipment.",
+      "cancellation - the customer refuses to receive the shipment",
+      "cancellation - product issue",
+      "cancellation - the customer wants to open the shipment.",
+      "cancellation - the customer wants to open the shipment",
+      "cancellation - shipment opened by force and refused by consignee"
+    ];
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); 
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        utterance.rate = 1.1; 
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function getVal(row, keysArray, defaultVal = "--") {
+      let rowKeys = Object.keys(row);
+      for (let key of keysArray) {
+        let match = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
+        if (match && row[match] !== undefined && row[match] !== null && String(row[match]).trim() !== "") {
+          return String(row[match]).trim();
+        }
+      }
+      return defaultVal;
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      let file = e.target.files[0];
+      if (!file) return;
+
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        let data = new Uint8Array(e.target.result);
+        let workbook = XLSX.read(data, { type: 'array' });
+        let worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        let jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        masterMap = {};
+        jsonData.forEach(row => {
+          let trk = getVal(row, ["Tracking Number", "tracking number", "Tracking"], Object.values(row)[0]);
+          
+          if (trk && trk !== "--") {
+            trk = String(trk).trim();
+
+            let rawStatus = getVal(row, ["Delivery State", "Status", "status"], "").toLowerCase();
+            let rawType = getVal(row, ["Type", "type"], "").toLowerCase();
+            let rawReason = getVal(row, ["Latest Exception Reason", "Exception Reason", "Reason"], "").toLowerCase();
+
+            let zoneCity = getVal(row, ["DropOff City", "DropOff Zone"], "القاهرة");
+            let zoneDistrict = getVal(row, ["DropOff District"], "");
+            let fullZone = zoneDistrict ? `${zoneCity} - ${zoneDistrict}` : zoneCity;
+
+            let line1 = getVal(row, ["DropOff First Line"], "");
+            let line2 = getVal(row, ["DropOff Second Line"], "");
+            let fullAddress = [line1, line2, zoneDistrict, zoneCity].filter(Boolean).join("، ") || "--";
+
+            let isRTOType = rawType.includes("rto") || 
+                            rawType.includes("customer_return_pickup") || 
+                            rawType.includes("exchange_return") || 
+                            rawType.includes("pick_and_choose") ||
+                            rawStatus.includes("rto") || 
+                            rawStatus.includes("returned") || 
+                            rawReason.includes("rto");
+
+            let isStrictCancelReason = ALLOWED_CANCEL_REASONS.some(r => rawReason.includes(r) || rawReason === r);
+
+            let category = "OTHER";
+            let details = "شحنة أخرى 👈 غير مدرجة بالكنسل";
+            let voiceText = "أخرى";
+            let labelTag = "OTHER";
+
+            if (isRTOType) {
+              category = "CANCEL_RTO";
+              details = "مرتجع RTO 👈 رف المرتجعات";
+              voiceText = "مرتجع";
+              labelTag = "CANCEL RTO / مرتجع";
+            } else if (isStrictCancelReason) {
+              category = "CANCEL";
+              details = "إكسبورت الكنسل 👈 رف الكنسل العادي";
+              voiceText = "كنسل عادي";
+              labelTag = "CANCEL / كنسل عادي";
+            }
+
+            masterMap[trk] = { 
+              category: category, details: details, voiceText: voiceText, labelTag: labelTag,
+              zone: fullZone, business: getVal(row, ["Business"], "عميل بوسطة"), starName: getVal(row, ["Star name"], "--"), address: fullAddress, cod: getVal(row, ["COD Amount", "COD"], "0"), desc: getVal(row, ["Description", "Items"], "طرد بوسطة"),
+              rawDate: getVal(row, ["Scheduled At", "Scheduled"], "--"), rawType: rawType || "SEND",
+              rawReason: rawReason || "--",
+              originalRow: row 
+            };
+          }
+        });
+
+        updateStats();
+        speakText("تم التحميل");
+        broadcastData({ type: 'SYNC_MASTER', masterMap: masterMap });
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    const barcodeInput = document.getElementById('barcode');
+    barcodeInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); triggerScan(); } });
+    barcodeInput.addEventListener('input', function() { clearTimeout(scanTimeout); scanTimeout = setTimeout(() => { triggerScan(); }, 150); });
+
+    function triggerScan() {
+      let code = barcodeInput.value.trim();
+      let user = document.getElementById('username').value.trim() || 'موظف';
+      if (code.length >= 4) { processScan(code, user, true); barcodeInput.value = ''; }
+    }
+
+    function processScan(code, user, isLocal) {
+      let alertBanner = document.getElementById('alertBanner');
+      alertBanner.style.display = 'block';
+      lastScannedCode = code;
+
+      if (scannedMap[code]) {
+        let prev = scannedMap[code];
+        alertBanner.className = 'alert-banner alert-DUPLICATE';
+        alertBanner.innerHTML = `⚠️ مكرر! تم المسح سابقاً بواسطة: (${prev.user}) عند ${prev.time}`;
+        speakText("مكرر");
+      } else {
+        let itemInfo = masterMap[code];
+        let category = itemInfo ? itemInfo.category : "UNKNOWN";
+        let details = itemInfo ? itemInfo.details : "❌ غير مدرجة في الملف!";
+        let voiceText = itemInfo ? itemInfo.voiceText : "مفقود";
+        let labelTag = itemInfo ? itemInfo.labelTag : "غير مدرج";
+        let timeStr = new Date().toLocaleTimeString('ar-EG');
+
+        scannedMap[code] = { 
+          user: user, time: timeStr, category: category, details: details, labelTag: labelTag,
+          zone: itemInfo ? itemInfo.zone : "غير معروف",
+          business: itemInfo ? itemInfo.business : "--",
+          starName: itemInfo ? itemInfo.starName : "--",
+          address: itemInfo ? itemInfo.address : "--",
+          cod: itemInfo ? itemInfo.cod : "0",
+          desc: itemInfo ? itemInfo.desc : "طرد بوسطة",
+          rawDate: itemInfo ? itemInfo.rawDate : "--",
+          rawType: itemInfo ? itemInfo.rawType : "SEND",
+          rawReason: itemInfo ? itemInfo.rawReason : "--",
+          originalRow: itemInfo ? itemInfo.originalRow : {}
+        };
+
+        alertBanner.className = 'alert-banner alert-' + category;
+        alertBanner.innerHTML = `رقم الشحنة: ${code} (${user})<br>${details}`;
+
+        speakText(voiceText);
+
+        if (document.getElementById('autoPrint').checked) {
+          setTimeout(() => { printLabel(code); }, 300);
+        }
+
+        if (isLocal) { broadcastData({ type: 'NEW_SCAN', code: code, user: user }); }
+      }
+
+      updateStats();
+      renderLogs();
+    }
+
+    function printLabel(code) {
+      let item = scannedMap[code];
+      if (!item) return alert("لا توجد بيانات لهذه الشحنة للطباعة!");
+
+      document.getElementById('lblTrk').innerText = code;
+      document.getElementById('lblZone').innerText = item.zone;
+      document.getElementById('lblBusiness').innerText = item.business;
+      document.getElementById('lblStar').innerText = item.starName;
+      document.getElementById('lblAddress').innerText = item.address;
+      document.getElementById('lblCod').innerText = item.cod;
+      document.getElementById('lblDesc').innerText = item.desc;
+      document.getElementById('lblTag').innerText = item.labelTag;
+      document.getElementById('lblDate').innerText = item.rawDate;
+      document.getElementById('lblType').innerText = item.rawType;
+      document.getElementById('lblUser').innerText = item.user;
+      document.getElementById('lblTime').innerText = item.time;
+
+      JsBarcode("#labelBarcode", code, { format: "CODE128", width: 2, height: 45, displayValue: false });
+      window.print();
+    }
+
+    function printLastScan() { if (lastScannedCode) printLabel(lastScannedCode); else alert("لم يتم مسح أي شحنة بعد!"); }
+
+    function updateStats() {
+      let masterKeys = Object.keys(masterMap);
+      let total = masterKeys.length;
+      let scannedKeys = Object.keys(scannedMap);
+
+      let cancelTotal = masterKeys.filter(k => masterMap[k].category === "CANCEL").length;
+      let cancelRtoTotal = masterKeys.filter(k => masterMap[k].category === "CANCEL_RTO").length;
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statScanned').innerText = scannedKeys.length;
+      document.getElementById('statCancel').innerText = cancelTotal;
+      document.getElementById('statCancelRTO').innerText = cancelRtoTotal;
+
+      document.getElementById('btnScannedCnt').innerText = scannedKeys.length;
+      document.getElementById('btnCancelCnt').innerText = cancelTotal;
+      document.getElementById('btnCancelRtoCnt').innerText = cancelRtoTotal;
+    }
+
+    function renderLogs() {
+      let tbody = document.getElementById('logsBody');
+      tbody.innerHTML = '';
+      let keys = Object.keys(scannedMap).reverse();
+
+      if (keys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted); padding:30px;">في انتظار بدء عملية المسح...</td></tr>';
+        return;
+      }
+
+      keys.forEach(code => {
+        let item = scannedMap[code];
+        tbody.innerHTML += `<tr>
+          <td><b style="color:var(--primary)">${code}</b></td>
+          <td>${item.user}</td>
+          <td>${item.time}</td>
+          <td><span style="padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); font-weight:bold;">${item.category}</span></td>
+          <td>${item.rawReason !== '--' ? item.rawReason : item.details}</td>
+          <td><button class="btn-print" onclick="printLabel('${code}')"><i class="fa-solid fa-print"></i> طباعة</button></td>
+        </tr>`;
+      });
+    }
+
+    function exportScannedOnly() {
+      let scannedKeys = Object.keys(scannedMap);
+      if (scannedKeys.length === 0) return alert("لم يتم مسح أي شحنة بالمقر حتى الآن لتصديرها!");
+
+      let exportData = scannedKeys.map(code => {
+        let item = scannedMap[code];
+        return {
+          "رقم تتبع الشحنة": code,
+          "تصنيف الفرز": item.category,
+          "الموظف المسؤول": item.user,
+          "وقت المسح": item.time,
+          "نوع الشحنة (Type)": item.rawType,
+          "سبب الاستثناء": item.rawReason,
+          "اسم التاجر": item.business,
+          "المندوب": item.starName,
+          "العنوان": item.address
+        };
+      });
+
+      let ws = XLSX.utils.json_to_sheet(exportData);
+      let wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "الممسوح بالمقر");
+      XLSX.writeFile(wb, `الشحنات_الممسوحة_بالمقر_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
+    }
+
+    function exportCategoryOnly(categoryName) {
+      let masterKeys = Object.keys(masterMap);
+      if (masterKeys.length === 0) return alert("يرجى رفع ملف الشيت الرئيسي أولاً!");
+
+      let targetKeys = masterKeys.filter(code => masterMap[code].category === categoryName);
+      if (targetKeys.length === 0) return alert(`لا توجد شحنات مطابقة لتصنيف (${categoryName}) في هذا الملف!`);
+
+      let exportRows = targetKeys.map(code => masterMap[code].originalRow);
+
+      let ws = XLSX.utils.json_to_sheet(exportRows);
+      let wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, categoryName);
+      XLSX.writeFile(wb, `إكسبورت_شحنات_${categoryName}.xlsx`);
+    }
+
+    function exportMissingReport() {
+      let masterKeys = Object.keys(masterMap);
+      if (masterKeys.length === 0) return alert("يرجى رفع ملف التصدير أولاً!");
+
+      let missing = masterKeys.filter(code => !scannedMap[code]);
+      let data = missing.map(code => ({
+        "رقم تتبع الشحنة": code,
+        "تصنيف الشحنة": masterMap[code].category,
+        "نوع الشحنة (Type)": masterMap[code].rawType,
+        "سبب الاستثناء": masterMap[code].rawReason,
+        "التوجيه ورف اليوم": masterMap[code].details,
+        "الحالة": "مفقود / لم يتم مسحه بالمقر"
+      }));
+
+      let ws = XLSX.utils.json_to_sheet(data);
+      let wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "المفقودات");
+      XLSX.writeFile(wb, "تقرير_المفقودات.xlsx");
+    }
+
+    function connectToRoom() {
+      let roomId = document.getElementById('roomId').value.trim();
+      if (!roomId) return alert("يرجى إدخال رمز الغرفة أولاً!");
+
+      document.getElementById('syncStatus').innerText = "● جاري الاتصال...";
+      peer = new Peer(roomId + "-" + Math.floor(Math.random()*1000));
+
+      peer.on('open', function() {
+        document.getElementById('syncStatus').innerText = "● متصل بالغرفة ✅";
+        document.getElementById('syncStatus').style.color = "var(--green)";
+        speakText("تم الاتصال");
+      });
+
+      peer.on('connection', function(conn) {
+        connections.push(conn);
+        conn.on('data', handleIncomingData);
+      });
+    }
+
+    function closeRoom() {
+      if (confirm("هل أنت تأكد من إغلاق الغرفة وإنهاء العمل؟")) {
+        broadcastData({ type: 'ROOM_CLOSED' });
+        connections.forEach(conn => conn.close());
+        connections = [];
+        if (peer) peer.destroy();
+        masterMap = {}; scannedMap = {};
+        document.getElementById('syncStatus').innerText = "● غير متصل";
+        document.getElementById('syncStatus').style.color = "var(--red)";
+        document.getElementById('alertBanner').style.display = 'none';
+        updateStats(); renderLogs();
+        speakText("تم الإغلاق");
+        alert("تم إغلاق الغرفة وفصل جميع الموظفين بنجاح!");
+      }
+    }
+
+    function broadcastData(data) { connections.forEach(conn => { if (conn.open) conn.send(data); }); }
+    function handleIncomingData(data) {
+      if (data.type === 'NEW_SCAN') { processScan(data.code, data.user, false); }
+      else if (data.type === 'SYNC_MASTER') { masterMap = data.masterMap; updateStats(); }
+      else if (data.type === 'ROOM_CLOSED') { alert("⚠️ تم إغلاق الغرفة بواسطة المشرف."); location.reload(); }
+    }
+  </script>
+</body>
+</html>
